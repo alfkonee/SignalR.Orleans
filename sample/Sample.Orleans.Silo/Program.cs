@@ -44,10 +44,6 @@ namespace Sample.Orleans.Silo
 			config.AddMemoryStorageProvider();
 			config.Globals.FallbackSerializationProvider = typeof(ILBasedSerializer).GetTypeInfo();
 
-			//config.AddMemoryStorageProvider("PubSubStore");
-			//config.AddSimpleMessageStreamProvider("heroes");
-
-
 			var builder = new SiloHostBuilder()
 				.UseConfiguration(config.AddSignalR())
 				.ConfigureServices(x =>
@@ -55,7 +51,6 @@ namespace Sample.Orleans.Silo
 					x.AddHeroesClients();
 				})
 				.AddApplicationPartsFromReferences(typeof(HeroGrain).Assembly)
-
 				.ConfigureLogging(logging => logging.AddConsole())
 				.UseSignalR()
 				//.ConfigureLogging(logging => logging.AddConfiguration(configuration.GetSection("Logging")).AddConsole())
