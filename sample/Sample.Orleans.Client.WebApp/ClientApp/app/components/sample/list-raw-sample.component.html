@@ -1,0 +1,19 @@
+<h1>Hero - Raw Sample</h1>
+<p>Current user <strong>{{currentUser}}</strong>.</p>
+<div>
+	<button (click)="loginAsClayton()">Login as Clayton</button>
+	<button (click)="loginAsStephen()">Login as Stephen</button>
+	<button (click)="connectAsAnonymous()">Anonymous User</button>
+</div>
+<div>
+	<button (click)="authorizedSubscriptionStream()">Authorized Subscription Stream</button>
+	<button [disabled]="!isConnected" (click)="stop()">Stop</button>
+</div>
+<div>
+	<button (click)="connect()">new connect</button>
+</div>
+<div>
+	<ul>
+		<li *ngFor="let hero of heroMessages; trackBy: trackByHero">{{hero.name}} - {{hero.health}}</li>
+	</ul>
+</div>

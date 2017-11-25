@@ -9,18 +9,20 @@ import { AppComponent } from "./components/app/app.component";
 import { NavMenuComponent } from "./components/navmenu/navmenu.component";
 import { HomeComponent } from "./components/home/home.component";
 import { HeroListComponent } from "./components/hero/list.component";
-import { SignalRClient } from "./components/hero/signalr.client";
 import { FetchDataComponent } from "./components/fetchdata/fetchdata.component";
 import { CounterComponent } from "./components/counter/counter.component";
+import { HeroListRawSampleComponent } from "./components/sample/list-raw-sample.component";
+import { SignalRClient } from "./components/sample/signalr.client";
 
 @NgModule({
 	declarations: [
+		HomeComponent,
 		AppComponent,
 		NavMenuComponent,
 		CounterComponent,
 		FetchDataComponent,
 		HeroListComponent,
-		HomeComponent
+		HeroListRawSampleComponent
 	],
 	imports: [
 		CommonModule,
@@ -31,6 +33,7 @@ import { CounterComponent } from "./components/counter/counter.component";
 			{ path: "home", component: HomeComponent },
 			{ path: "counter", component: CounterComponent },
 			{ path: "hero-list", component: HeroListComponent },
+			{ path: "raw-sample", component: HeroListRawSampleComponent },
 			{ path: "fetch-data", component: FetchDataComponent },
 			{ path: "**", redirectTo: "home" }
 		])

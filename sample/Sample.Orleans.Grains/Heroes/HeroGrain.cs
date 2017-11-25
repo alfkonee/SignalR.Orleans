@@ -58,7 +58,7 @@ namespace Sample.Orleans.Grains.Heroes
 					stream.OnNextAsync(State.Hero)
 				  );
 
-			}, State, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(30));
+			}, State, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(10));
 		}
 
 		public override Task OnDeactivateAsync()
