@@ -14,7 +14,6 @@ namespace Sample.Orleans.Grains.Heroes
 	{
 		Task Set(Hero hero);
 		Task<Hero> Get();
-		Task<Guid> GetKey();
 	}
 
 	[Serializable, DebuggerDisplay("{DebuggerDisplay,nq}")]

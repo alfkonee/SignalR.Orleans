@@ -11,8 +11,6 @@ namespace Sample.Orleans.Grains.Heroes
 	[StorageProvider(ProviderName = "MemoryStore")]
 	public class HeroGrain : Grain<HeroState>, IHeroGrain
 	{
-		public static Guid Key = Guid.NewGuid();
-
 		private const string Source = nameof(HeroGrain);
 		private readonly ILogger<HeroGrain> _logger;
 		private readonly IHeroService _service;
@@ -37,8 +35,6 @@ namespace Sample.Orleans.Grains.Heroes
 
 		public Task<Hero> Get() => Task.FromResult(State.Hero);
 
-		public Task<Guid> GetKey() => Task.FromResult(Key);
-
 		public override async Task OnActivateAsync()
 		{
 			_hubContext = GrainFactory.GetHub<IHeroHub>();
@@ -47,7 +43,7 @@ namespace Sample.Orleans.Grains.Heroes
 			await Set(item);
 
 			var streamProvider = GetStreamProvider(Constants.STREAM_PROVIDER);
-			var stream = streamProvider.GetStream<Hero>(Key, $"hero:{this.GetPrimaryKeyString()}");
+			var stream = streamProvider.GetStream<Hero>(StreamConstants.HeroStream, $"hero:{this.GetPrimaryKeyString()}");
 
 			RegisterTimer(async x =>
 			{
@@ -58,7 +54,7 @@ namespace Sample.Orleans.Grains.Heroes
 					stream.OnNextAsync(State.Hero)
 				  );
 
-			}, State, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(10));
+			}, State, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(3));
 		}
 
 		public override Task OnDeactivateAsync()

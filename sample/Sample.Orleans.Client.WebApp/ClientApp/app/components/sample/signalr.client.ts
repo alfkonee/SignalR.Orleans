@@ -1,8 +1,8 @@
 import { Injectable, NgZone } from "@angular/core";
 import { HubConnection } from "@aspnet/signalr-client";
 import { Observable, SubscribableOrPromise } from "rxjs/Observable";
-import { map, tap } from "rxjs/operators";
-import "rxjs/add/observable/fromPromise";
+import { fromPromise } from "rxjs/Observable/fromPromise";
+import { tap } from "rxjs/operators";
 import { Observer } from "rxjs/Observer";
 
 @Injectable()
@@ -19,7 +19,7 @@ export class SignalRClient {
 
 	connect(endpointUri: string): Observable<void> {
 		this._hubConnection = new HubConnection(endpointUri);
-		return Observable.fromPromise(this._hubConnection.start())
+		return fromPromise(this._hubConnection.start())
 			.pipe(
 			tap(() => {
 				console.info("SignalRClient :: Hub connection started!!!");
@@ -40,7 +40,7 @@ export class SignalRClient {
 
 	connectV2(endpointUri: string): Observable<void> {
 		this._hubConnection = new HubConnection(endpointUri);
-		return this.zone.runOutsideAngular(() => Observable.fromPromise(this._hubConnection.start())
+		return this.zone.runOutsideAngular(() => fromPromise(this._hubConnection.start())
 			.pipe(
 			tap(() => {
 				console.info("SignalRClient :: Hub connection started!!!");
@@ -97,11 +97,11 @@ export class SignalRClient {
 	}
 
 	send<T>(methodName: string, ...args: any[]): Observable<void> {
-		return Observable.fromPromise<void>(this._hubConnection.send(methodName, args));
+		return fromPromise<void>(this._hubConnection.send(methodName, args));
 	}
 
 	invoke<T>(methodName: string, ...args: any[]): Observable<T> {
-		return Observable.fromPromise<T>(this._hubConnection.invoke(methodName, args));
+		return fromPromise<T>(this._hubConnection.invoke(methodName, args));
 	}
 
 	disconnect() {

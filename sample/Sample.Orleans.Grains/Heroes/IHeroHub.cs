@@ -6,5 +6,6 @@ namespace Sample.Orleans.Grains.Heroes
 	{
 		Task Send(string message);
 		Task Broadcast(Hero hero);
+		Task StreamUnsubscribe(string methodName, string id);
 	}
 }

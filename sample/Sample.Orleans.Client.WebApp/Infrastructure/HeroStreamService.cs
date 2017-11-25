@@ -9,6 +9,7 @@ using Sample.Orleans.Grains.Heroes;
 using SignalR.Orleans;
 using System;
 using System.Threading.Tasks;
+using Sample.Orleans.Grains;
 
 namespace Sample.Orleans.Client.WebApp.Infrastructure
 {
@@ -38,11 +39,9 @@ namespace Sample.Orleans.Client.WebApp.Infrastructure
 		private async Task Activate()
 		{
 			var heroName = "singed";
-			var grain = _clusterClient.GetGrain<IHeroGrain>(heroName);
-			var session = await grain.GetKey();
 
 			var streamProvider = _clusterClient.GetStreamProvider(Constants.STREAM_PROVIDER);
-			var stream = streamProvider.GetStream<Hero>(session, $"hero:{heroName}");
+			var stream = streamProvider.GetStream<Hero>(StreamConstants.HeroStream, $"hero:{heroName}");
 
 			_healthStreamSub = await stream.SubscribeAsync(
 				(hero, st) =>
