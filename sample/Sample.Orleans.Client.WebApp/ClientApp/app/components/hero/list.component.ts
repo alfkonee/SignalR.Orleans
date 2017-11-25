@@ -69,7 +69,11 @@ export class HeroListComponent implements OnInit {
 	}
 
 	send() {
-		this.hubConnection.send("hoh", "sad");
+		this.hubConnection.send("StreamUnsubscribe", "fakeMethod", "sad");
+	}
+
+	invoke() {
+		this.hubConnection.invoke("StreamUnsubscribe", "fakeMethod", "sad");
 	}
 }
 

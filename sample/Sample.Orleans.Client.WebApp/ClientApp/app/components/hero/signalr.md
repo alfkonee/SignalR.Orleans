@@ -10,3 +10,6 @@
   * allow multiple subcriptions and sent only once from server
   * unsubscribe 
     * handle unsubscribe for multiple subscription of the same item
+ * Send
+ * Invoke 
+ * Disconnect

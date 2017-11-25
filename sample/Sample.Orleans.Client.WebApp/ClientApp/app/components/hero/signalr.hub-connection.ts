@@ -56,12 +56,12 @@ export class SignalRHubConnection<THub> {
 				complete: () => observer.complete()
 			});
 
-			return () => this._hubConnection.send("StreamUnsubscribe", methodName, ...args);
+			return () => this.send("StreamUnsubscribe", methodName, ...args);
 		});
 	}
 
-	send(methodName: string, ...args: any[]): void {
-		this._hubConnection.send(methodName, ...args);
+	send(methodName: string, ...args: any[]): Observable<void> {
+		return fromPromise(this._hubConnection.send(methodName, ...args));
 	}
 
 	invoke<T>(methodName: string, ...args: any[]): Observable<T> {
