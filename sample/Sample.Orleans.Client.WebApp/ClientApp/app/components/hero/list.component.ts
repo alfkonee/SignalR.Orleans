@@ -14,7 +14,6 @@ export class HeroListComponent implements OnInit, OnDestroy {
 	currentUser = "Anonymous";
 	isConnected = false;
 
-	private connectionFactory = new HubConnectionFactory();
 	private hubConnection: SignalRHubConnection<HeroHub>;
 
 	private source = "HeroListComponent ::";
@@ -39,7 +38,7 @@ export class HeroListComponent implements OnInit, OnDestroy {
 		if (user) {
 			userToken = `?token=${user}`;
 		}
-		this.hubConnection = this.hubFactory.get<Hero>("hero");
+		this.hubConnection = this.hubFactory.get<HeroHub>("hero");
 		// this.hubConnection = new SignalRHubConnection<HeroHub>({ name: "hero", endpointUri: `${this.endpointUri}${userToken}` });
 	}
 
@@ -104,5 +103,7 @@ export interface Hero {
 }
 
 export interface HeroHub {
-
+	Send: string;
+	GetUpdates: string;
+	Echo: number;
 }

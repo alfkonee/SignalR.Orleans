@@ -3,10 +3,12 @@ import { SignalRHubConnection, Dictionary, HubConnectionOptions } from "./signal
 export class HubConnectionFactory {
 	private connections: Dictionary<SignalRHubConnection<any>> = {};
 
-	create<THub>(...connectionOptions: HubConnectionOptions[]): void {
+	create(...connectionOptions: HubConnectionOptions[]): this {
 		for (const connectionOption of connectionOptions) {
-			this.connections[connectionOption.name] = new SignalRHubConnection<THub>(connectionOption);
+			this.connections[connectionOption.name] = new SignalRHubConnection<any>(connectionOption);
 		}
+
+		return this;
 	}
 
 	get<THub>(name: string): SignalRHubConnection<THub> {

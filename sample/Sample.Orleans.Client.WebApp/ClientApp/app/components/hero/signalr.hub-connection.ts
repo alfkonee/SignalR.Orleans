@@ -1,6 +1,6 @@
 import { HubConnection } from "@aspnet/signalr-client";
 import { Observable, SubscribableOrPromise } from "rxjs/Observable";
-import { fromPromise } from "rxjs/Observable/fromPromise";
+import { fromPromise } from "rxjs/observable/fromPromise";
 import { tap } from "rxjs/operators";
 import { Observer } from "rxjs/Observer";
 import { BehaviorSubject } from "rxjs/BehaviorSubject";
@@ -39,16 +39,16 @@ export class SignalRHubConnection<THub> {
 			); // .catchError();
 	}
 
-	on<T>(methodName: string): Observable<T> {
-		return Observable.create((observer: Observer<T>): (() => void) | void => {
+	on<TResult>(methodName: keyof THub): Observable<TResult> {
+		return Observable.create((observer: Observer<TResult>): (() => void) | void => {
 
-			const updateEvent = (latestValue: T) => observer.next(latestValue);
+			const updateEvent = (latestValue: TResult) => observer.next(latestValue);
 			this._hubConnection.on(methodName, updateEvent);
 			return () => this._hubConnection.off(methodName, updateEvent);
 		});
 	}
 
-	stream<TResult>(methodName: string, ...args: any[]): Observable<TResult> {
+	stream<TResult>(methodName: keyof THub, ...args: any[]): Observable<TResult> {
 		return Observable.create((observer: Observer<TResult>): (() => void) | void => {
 			// todo: dispose once available from signalr
 			this._hubConnection.stream<TResult>(methodName, ...args).subscribe({
@@ -62,11 +62,11 @@ export class SignalRHubConnection<THub> {
 		});
 	}
 
-	send(methodName: string, ...args: any[]): Observable<void> {
+	send(methodName: keyof THub | "StreamUnsubscribe", ...args: any[]): Observable<void> {
 		return fromPromise(this._hubConnection.send(methodName, ...args));
 	}
 
-	invoke<T>(methodName: string, ...args: any[]): Observable<T> {
+	invoke<T>(methodName: keyof THub, ...args: any[]): Observable<T> {
 		return fromPromise<T>(this._hubConnection.invoke(methodName, ...args));
 	}
 
