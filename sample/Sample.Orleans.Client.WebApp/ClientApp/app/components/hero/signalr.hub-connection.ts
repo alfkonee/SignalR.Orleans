@@ -4,6 +4,7 @@ import { fromPromise } from "rxjs/Observable/fromPromise";
 import { tap } from "rxjs/operators";
 import { Observer } from "rxjs/Observer";
 import { BehaviorSubject } from "rxjs/BehaviorSubject";
+import { IHubConnectionOptions } from "@aspnet/signalr-client/dist/src/IHubConnectionOptions";
 
 export enum ConnectionState {
 	connected = "Connected",
@@ -15,11 +16,12 @@ export class SignalRHubConnection<THub> {
 
 	connectionState$ = new BehaviorSubject<ConnectionState>(ConnectionState.disconnected);
 
+	private _source: string;
 	private _hubConnection: HubConnection;
-	private _source = `${SignalRHubConnection} ::`;
 
-	constructor(endpointUri: string) {
-		this._hubConnection = new HubConnection(endpointUri);
+	constructor(connectionOption: HubConnectionOptions) {
+		this._hubConnection = new HubConnection(connectionOption.endpointUri, connectionOption.options);
+		this._source = `[${connectionOption.name}]${hubConnectionName} ::`;
 	}
 
 	connect(): Observable<void> {
@@ -74,10 +76,21 @@ export class SignalRHubConnection<THub> {
 			this._hubConnection.stop();
 		}
 	}
+}
 
-	// private reconnectStrategy() {
-	// 	console.debug("reconnecting...");
-	// 	setTimeout(() => this.createConnection(), 5000);
-	// }
+const hubConnectionName = SignalRHubConnection.name;
 
+export interface HubConnectionOptions {
+	name: string;
+	endpointUri: string;
+	options?: ConnectionOptions;
+	data?: Dictionary<string>;
+}
+
+export interface ConnectionOptions extends IHubConnectionOptions {
+
+}
+
+export interface Dictionary<T> {
+	[key: string]: T;
 }

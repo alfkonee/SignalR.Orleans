@@ -1,17 +1,20 @@
-import { Component, OnInit } from "@angular/core";
+import { Component, OnInit, OnDestroy } from "@angular/core";
 import { SignalRHubConnection, ConnectionState } from "./signalr.hub-connection";
 import { ISubscription } from "rxjs/Subscription";
+import { HubConnectionFactory } from "./signalr.hub-connection.factory";
+import { NgxHubConnectionFactory } from "./ngx.hub-connection.factory";
 
 @Component({
 	selector: "hero-list",
 	templateUrl: "./list.component.html"
 })
-export class HeroListComponent implements OnInit {
+export class HeroListComponent implements OnInit, OnDestroy {
 
 	heroMessages: Hero[] = [];
 	currentUser = "Anonymous";
 	isConnected = false;
 
+	private connectionFactory = new HubConnectionFactory();
 	private hubConnection: SignalRHubConnection<HeroHub>;
 
 	private source = "HeroListComponent ::";
@@ -20,6 +23,11 @@ export class HeroListComponent implements OnInit {
 
 	private kha$$: ISubscription | undefined;
 	private singed$$: ISubscription | undefined;
+
+	constructor(
+		private hubFactory: HubConnectionFactory
+	) { }
+
 
 	ngOnInit(): void {
 		this.createConnection(this.endpointUri, "cla-key");
@@ -31,7 +39,8 @@ export class HeroListComponent implements OnInit {
 		if (user) {
 			userToken = `?token=${user}`;
 		}
-		this.hubConnection = new SignalRHubConnection<HeroHub>(`${this.endpointUri}${userToken}`);
+		this.hubConnection = this.hubFactory.get<Hero>("hero");
+		// this.hubConnection = new SignalRHubConnection<HeroHub>({ name: "hero", endpointUri: `${this.endpointUri}${userToken}` });
 	}
 
 	connect() {
@@ -73,8 +82,19 @@ export class HeroListComponent implements OnInit {
 	}
 
 	invoke() {
-		this.hubConnection.invoke("StreamUnsubscribe", "fakeMethod", "sad");
+		this.hubConnection.invoke("Echo", "fucking builds")
+			.subscribe(x => console.log(`${this.source} invoke :: result`, x));
 	}
+
+	ngOnDestroy(): void {
+		if (this.kha$$) {
+			this.kha$$.unsubscribe();
+		}
+		if (this.singed$$) {
+			this.singed$$.unsubscribe();
+		}
+	}
+
 }
 
 export interface Hero {

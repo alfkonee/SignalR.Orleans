@@ -133,6 +133,11 @@ namespace Sample.Orleans.Client.WebApp.SignalRHubs
 			}
 		}
 
+		public Task<string> Echo(string message)
+		{
+			return Task.FromResult($"hello {message}");
+		}
+
 		public IObservable<int> ObservableCounter(int count, int delay)
 		{
 			return Observable.Interval(TimeSpan.FromMilliseconds(delay))
