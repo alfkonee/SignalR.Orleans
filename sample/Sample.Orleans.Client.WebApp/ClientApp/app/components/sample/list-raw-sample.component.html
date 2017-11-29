@@ -10,9 +10,6 @@
 	<button [disabled]="!isConnected" (click)="stop()">Stop</button>
 </div>
 <div>
-	<button (click)="connect()">new connect</button>
-</div>
-<div>
 	<ul>
 		<li *ngFor="let hero of heroMessages; trackBy: trackByHero">{{hero.name}} - {{hero.health}}</li>
 	</ul>

@@ -2,7 +2,6 @@ import { Component, OnInit } from "@angular/core";
 import { HubConnection, HttpClient, TransportType } from "@aspnet/signalr-client";
 import { HttpHeaders } from "@angular/common/http";
 
-import { SignalRClient } from "./signalr.client";
 
 @Component({
 	selector: "hero-list-raw",
@@ -21,56 +20,9 @@ export class HeroListRawSampleComponent implements OnInit {
 	private endpointUri = "/hero";
 	private endpointUriNotifications = "/userNotifications";
 
-	// private headers: HttpHeaders;
-	// private httpClient: HttpClient;
-
-	constructor(
-		private client: SignalRClient
-		// private http: HttpClient,
-		// private httpClient: HttpClient
-
-	) {
-		// this.headers.set("Authorization", "orleans-test cla-key");
-
-		// this.httpClient = new HttpClient();
-		// const map = new Map<string, string>();
-		// map.set("Authorization", "orleans-test cla-key");
-		// this.httpClient.options("/hero", map);
-
-		// this._hubConnection = new HubConnection("/hero?Authorization=orleans-test cla-key", {
-		// 	httpClient: this.httpClient,
-		// 	transport: TransportType.WebSockets
-		// });
-	}
-
-	connect() {
-		let userToken = "";
-		const user = "";
-		if (user) {
-			userToken = `?token=${user}`;
-		}
-
-		this.client.connect(`${this.endpointUri}${userToken}`)
-		.subscribe();
-		// this.client.subscribeOn<Hero>("Broadcast").subscribe(hero => {
-		// 	console.log("broadcast :: HERO", hero);
-		// 	this.heroMessages.push(hero);
-		// });
-		this.client.subscribeOn<string>("Send").subscribe(heroHealth => {
-			console.log("send :: data received", heroHealth);
-		});
-
-		this.client.subscribeStream<Hero>("GetUpdates", "kha-zix")
-			.subscribe(x => console.log("wwwwwwwwwww", x));
-
-		this.client.subscribeStream<Hero>("GetUpdates", "singed")
-			.subscribe(x => console.log("xvxzcf", x));
-
-	}
-
 	ngOnInit(): void {
 		this.createConnection("cla-key");
-		this.createConnectionNotification("cla-key");
+		// this.createConnectionNotification("cla-key");
 	}
 
 	loginAsClayton() {

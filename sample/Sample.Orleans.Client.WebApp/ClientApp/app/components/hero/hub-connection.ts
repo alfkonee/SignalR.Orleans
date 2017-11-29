@@ -30,7 +30,7 @@ export class HubConnection<THub> {
 
 		this.hubConnectionOptions$
 			.pipe(
-			throttleTime(100),
+			// throttleTime(100),
 			tap(x => console.warn("hubConnectionOptions triggered ", x.data)),
 			map(connectionOpts => {
 				const wasConnected = this._connectionState$.value.status === ConnectionStatus.connected;
@@ -51,18 +51,6 @@ export class HubConnection<THub> {
 			.subscribe();
 	}
 
-	onConnectionDataChanged(connection: HubConnectionOptions) {
-		const wasConnected = this._connectionState$.value.status === ConnectionStatus.connected;
-		this.disconnect();
-
-		const queryString = buildQueryString(connection.data);
-		this.hubConnection = new SignalRHubConnection(`${connection.endpointUri}${queryString}`, connection.options);
-
-		if (wasConnected) {
-			this.connect();
-		}
-	}
-
 	connect(): Observable<void> {
 		console.warn(`${this.source} trying to connect...`);
 		if (this._connectionState$.value.status === ConnectionStatus.connected) {
@@ -73,6 +61,7 @@ export class HubConnection<THub> {
 		return fromPromise(this.hubConnection.start())
 			.pipe(
 			tap(() => {
+				console.info(`${this.source} connected!`);
 				this._connectionState$.next(connectedState);
 				this.hubConnection.onclose(err => {
 					console.warn(`${this.source} session closed`);
@@ -136,7 +125,8 @@ export class HubConnection<THub> {
 		if (this._connectionState$.value.status === ConnectionStatus.connected) {
 			console.warn(`stopping...`);
 			this.hubConnection.stop();
-			this.hubConnection = undefined as any;
+			this._connectionState$.next(disconnectedState);
+			// this.hubConnection = undefined as any;
 		}
 	}
 }

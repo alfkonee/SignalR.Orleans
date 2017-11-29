@@ -12,7 +12,6 @@ import { HeroListComponent } from "./components/hero/list.component";
 import { FetchDataComponent } from "./components/fetchdata/fetchdata.component";
 import { CounterComponent } from "./components/counter/counter.component";
 import { HeroListRawSampleComponent } from "./components/sample/list-raw-sample.component";
-import { SignalRClient } from "./components/sample/signalr.client";
 import { HubConnectionFactory } from "./components/hero/hub-connection.factory";
 import { NgxHubConnectionFactory } from "./components/hero/ngx.hub-connection.factory";
 
@@ -41,7 +40,6 @@ import { NgxHubConnectionFactory } from "./components/hero/ngx.hub-connection.fa
 		])
 	],
 	providers: [
-		SignalRClient,
 		HubConnectionFactory,
 		NgxHubConnectionFactory
 	]

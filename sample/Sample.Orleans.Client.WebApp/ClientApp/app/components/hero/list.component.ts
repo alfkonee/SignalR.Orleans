@@ -25,6 +25,7 @@ export class HeroListComponent implements OnInit, OnDestroy {
 	private kha$$: ISubscription | undefined;
 	private singed$$: ISubscription | undefined;
 	private hubConnection$$: ISubscription;
+	private connectionState$$: ISubscription;
 
 	constructor(
 		private hubFactory: HubConnectionFactory
@@ -45,10 +46,11 @@ export class HeroListComponent implements OnInit, OnDestroy {
 
 	connect() {
 		this.hubConnection$$ = this.hubConnection.connect()
-			.subscribe();
+			.subscribe(x => console.log(`${this.source} connected!!`));
 
-		this.hubConnection.connectionState$
+		this.connectionState$$ = this.hubConnection.connectionState$
 			.subscribe(state => {
+				console.log(`${this.source} state changed: ${state.status} is ${ConnectionStatus.connected} (connected)`);
 				if (state.status === ConnectionStatus.connected) {
 					this.hubConnection.on<string>("Send").subscribe(heroHealth => {
 						console.log(`${this.source} send :: data received`, heroHealth);
@@ -65,15 +67,17 @@ export class HeroListComponent implements OnInit, OnDestroy {
 
 	dispose() {
 		console.log(`${this.source} disposing...`);
+		if (this.connectionState$$) {
+			this.connectionState$$.unsubscribe();
+		}
+		if (this.hubConnection$$) {
+			this.hubConnection$$.unsubscribe();
+		}
 		if (this.kha$$) {
-			console.log(`${this.source} disposing kha...`);
 			this.kha$$.unsubscribe();
-			this.kha$$ = undefined;
 		}
 		if (this.singed$$) {
-			console.log(`${this.source} disposing singed...`);
 			this.singed$$.unsubscribe();
-			this.singed$$ = undefined;
 		}
 	}
 
@@ -98,19 +102,10 @@ export class HeroListComponent implements OnInit, OnDestroy {
 
 	disconnect() {
 		this.hubConnection.disconnect();
-		// this.hubConnection = undefined as any;
 	}
 
 	ngOnDestroy(): void {
-		if (this.hubConnection$$) {
-			this.hubConnection$$.unsubscribe();
-		}
-		if (this.kha$$) {
-			this.kha$$.unsubscribe();
-		}
-		if (this.singed$$) {
-			this.singed$$.unsubscribe();
-		}
+		this.dispose();
 	}
 
 }
