@@ -1,8 +1,10 @@
 import { Component, OnInit, OnDestroy } from "@angular/core";
-import { SignalRHubConnection, ConnectionState } from "./signalr.hub-connection";
 import { ISubscription } from "rxjs/Subscription";
-import { HubConnectionFactory } from "./signalr.hub-connection.factory";
+
 import { NgxHubConnectionFactory } from "./ngx.hub-connection.factory";
+import { HubConnection } from "./hub-connection";
+import { HubConnectionFactory } from "./hub-connection.factory";
+import { ConnectionStatus } from "./hub-connection.model";
 
 @Component({
 	selector: "hero-list",
@@ -14,7 +16,7 @@ export class HeroListComponent implements OnInit, OnDestroy {
 	currentUser = "Anonymous";
 	isConnected = false;
 
-	private hubConnection: SignalRHubConnection<HeroHub>;
+	private hubConnection: HubConnection<HeroHub>;
 
 	private source = "HeroListComponent ::";
 	private endpointUri = "/hero";
@@ -27,7 +29,6 @@ export class HeroListComponent implements OnInit, OnDestroy {
 		private hubFactory: HubConnectionFactory
 	) { }
 
-
 	ngOnInit(): void {
 		this.createConnection(this.endpointUri, "cla-key");
 		this.connect();
@@ -39,7 +40,6 @@ export class HeroListComponent implements OnInit, OnDestroy {
 			userToken = `?token=${user}`;
 		}
 		this.hubConnection = this.hubFactory.get<HeroHub>("hero");
-		// this.hubConnection = new SignalRHubConnection<HeroHub>({ name: "hero", endpointUri: `${this.endpointUri}${userToken}` });
 	}
 
 	connect() {
@@ -48,7 +48,7 @@ export class HeroListComponent implements OnInit, OnDestroy {
 
 		this.hubConnection.connectionState$
 			.subscribe(state => {
-				if (state === ConnectionState.connected) {
+				if (state.status === ConnectionStatus.connected) {
 					this.hubConnection.on<string>("Send").subscribe(heroHealth => {
 						console.log(`${this.source} send :: data received`, heroHealth);
 					});
@@ -83,6 +83,10 @@ export class HeroListComponent implements OnInit, OnDestroy {
 	invoke() {
 		this.hubConnection.invoke("Echo", "fucking builds")
 			.subscribe(x => console.log(`${this.source} invoke :: result`, x));
+	}
+
+	trackByHero(_index: number, hero: Hero): string {
+		return `${hero.id}-${hero.health}`;
 	}
 
 	ngOnDestroy(): void {
