@@ -2,11 +2,14 @@ import { HubConnection as SignalRHubConnection } from "@aspnet/signalr-client";
 import { fromPromise } from "rxjs/observable/fromPromise";
 import { BehaviorSubject } from "rxjs/BehaviorSubject";
 import { Observable } from "rxjs/Observable";
+import { empty } from "rxjs/observable/empty";
 import { Subject } from "rxjs/Subject";
 import { Observer } from "rxjs/Observer";
-import { tap } from "rxjs/operators";
+import { tap, map, filter, throttleTime } from "rxjs/operators";
 
 import { ConnectionState, ConnectionStatus, HubConnectionOptions } from "./hub-connection.model";
+import { Dictionary } from "./core/collection";
+import { buildQueryString } from "./core/utils";
 
 const connectedState: ConnectionState = { status: ConnectionStatus.connected };
 const disconnectedState: ConnectionState = { status: ConnectionStatus.disconnected };
@@ -17,24 +20,62 @@ export class HubConnection<THub> {
 
 	private source: string;
 	private hubConnection: SignalRHubConnection;
-	private hubConnectionOptions = new Subject<HubConnectionOptions>();
+	private hubConnectionOptions$: BehaviorSubject<HubConnectionOptions>;
 	private _connectionState$ = new BehaviorSubject<ConnectionState>(disconnectedState);
 
 	constructor(connectionOption: HubConnectionOptions) {
 		this.source = `[${connectionOption.key}] HubConnection ::`;
-		this.hubConnectionOptions.subscribe(connection => {
-			this.hubConnection = new SignalRHubConnection(connection.endpointUri, connection.options);
-		});
-		this.hubConnectionOptions.next(connectionOption);
+
+		this.hubConnectionOptions$ = new BehaviorSubject<HubConnectionOptions>(connectionOption);
+
+		this.hubConnectionOptions$
+			.pipe(
+			throttleTime(100),
+			tap(x => console.warn("hubConnectionOptions triggered ", x.data)),
+			map(connectionOpts => {
+				const wasConnected = this._connectionState$.value.status === ConnectionStatus.connected;
+				return [connectionOpts, wasConnected] as [HubConnectionOptions, boolean];
+			}),
+			tap(() => this.disconnect()),
+			map(([connectionOpts, wasConnected]) => {
+				const queryString = buildQueryString(connectionOpts.data);
+				console.warn(`connecting to: ${connectionOpts.endpointUri}${queryString}`);
+				return [connectionOpts, wasConnected, queryString] as [HubConnectionOptions, boolean, string];
+			}),
+			tap(([connectionOpts, wasConnected, queryString]) =>
+				this.hubConnection = new SignalRHubConnection(`${connectionOpts.endpointUri}${queryString}`, connectionOpts.options)
+			),
+			filter(([, wasConnected]) => wasConnected),
+			// map(() => this.connect())
+			)
+			.subscribe();
+	}
+
+	onConnectionDataChanged(connection: HubConnectionOptions) {
+		const wasConnected = this._connectionState$.value.status === ConnectionStatus.connected;
+		this.disconnect();
+
+		const queryString = buildQueryString(connection.data);
+		this.hubConnection = new SignalRHubConnection(`${connection.endpointUri}${queryString}`, connection.options);
+
+		if (wasConnected) {
+			this.connect();
+		}
 	}
 
 	connect(): Observable<void> {
+		console.warn(`${this.source} trying to connect...`);
+		if (this._connectionState$.value.status === ConnectionStatus.connected) {
+			console.warn(`${this.source} session already connected`);
+			return empty();
+		}
+
 		return fromPromise(this.hubConnection.start())
 			.pipe(
 			tap(() => {
 				this._connectionState$.next(connectedState);
-
 				this.hubConnection.onclose(err => {
+					console.warn(`${this.source} session closed`);
 
 					if (err) {
 						console.error(`${this.source} session closed with errors`, err);
@@ -45,6 +86,21 @@ export class HubConnection<THub> {
 				});
 			})
 			); // .catchError();
+	}
+
+	setData(data: Dictionary<string>) {
+		if (!data) {
+			return;
+		}
+		const connection = this.hubConnectionOptions$.value;
+		connection.data = { ...connection.data, ...data } as Dictionary<string>;
+		this.hubConnectionOptions$.next(connection);
+	}
+
+	clearData() {
+		const connection = this.hubConnectionOptions$.value;
+		connection.data = undefined;
+		this.hubConnectionOptions$.next(connection);
 	}
 
 	on<TResult>(methodName: keyof THub): Observable<TResult> {
@@ -76,8 +132,22 @@ export class HubConnection<THub> {
 	}
 
 	disconnect() {
+		console.warn(`disconnecting...`);
 		if (this._connectionState$.value.status === ConnectionStatus.connected) {
+			console.warn(`stopping...`);
 			this.hubConnection.stop();
+			this.hubConnection = undefined as any;
 		}
 	}
 }
+
+// function conditionalTap<TResult>(
+// 	value: TResult,
+// 	conditionFn: (x: TResult) => boolean,
+// 	next: (x: TResult) => void
+// ): MonoTypeOperatorFunction<TResult> {
+// 	return (source: Observable<TResult>): Observable<TResult> => {
+// 		const result: boolean = conditionFn(value);
+// 		return result ? tap(next) : tap();
+// 	};
+// }

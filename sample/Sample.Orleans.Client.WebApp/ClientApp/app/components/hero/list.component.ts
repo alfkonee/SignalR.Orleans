@@ -24,6 +24,7 @@ export class HeroListComponent implements OnInit, OnDestroy {
 
 	private kha$$: ISubscription | undefined;
 	private singed$$: ISubscription | undefined;
+	private hubConnection$$: ISubscription;
 
 	constructor(
 		private hubFactory: HubConnectionFactory
@@ -43,7 +44,7 @@ export class HeroListComponent implements OnInit, OnDestroy {
 	}
 
 	connect() {
-		this.hubConnection.connect()
+		this.hubConnection$$ = this.hubConnection.connect()
 			.subscribe();
 
 		this.hubConnection.connectionState$
@@ -85,11 +86,25 @@ export class HeroListComponent implements OnInit, OnDestroy {
 			.subscribe(x => console.log(`${this.source} invoke :: result`, x));
 	}
 
+	setData() {
+		this.hubConnection.setData({ token: "cla-keyxx", test: "hello1" });
+		// this.hubConnection.setData({ token: "cla-x", test: "hello2" });
+		// this.hubConnection.setData({ token: "cla-kezy", test: "hello3" });
+	}
+
 	trackByHero(_index: number, hero: Hero): string {
 		return `${hero.id}-${hero.health}`;
 	}
 
+	disconnect() {
+		this.hubConnection.disconnect();
+		// this.hubConnection = undefined as any;
+	}
+
 	ngOnDestroy(): void {
+		if (this.hubConnection$$) {
+			this.hubConnection$$.unsubscribe();
+		}
 		if (this.kha$$) {
 			this.kha$$.unsubscribe();
 		}

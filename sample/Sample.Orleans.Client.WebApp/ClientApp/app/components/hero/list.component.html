@@ -2,9 +2,16 @@
 <p>Current user <strong>{{currentUser}}</strong>.</p>
 
 <div>
+	<button (click)="connect()">connect</button>
+	<button (click)="disconnect()">disconnect</button>
+</div>
+<div>
 	<button (click)="dispose()">dispose</button>
 	<button (click)="send()">send</button>
 	<button (click)="invoke()">invoke</button>	
+</div>
+<div>
+	<button (click)="setData()">setData</button>
 </div>
 <div>
 	<ul>

@@ -112,7 +112,7 @@ namespace Sample.Orleans.Client.WebApp.SignalRHubs
 						 heroSubject.OnNext(action);
 						 return Task.CompletedTask;
 					 });
-				 Context.Connection.Metadata.Add($"{nameof(GetUpdates)}:{id}", new Subcription<Hero>
+				 Context.Connection.Metadata.Add($"{nameof(GetUpdates)}:{id}", new Subscription<Hero>
 				 {
 					 Stream = heroStream,
 					 Subject = heroSubject
@@ -125,11 +125,12 @@ namespace Sample.Orleans.Client.WebApp.SignalRHubs
 		public async Task StreamUnsubscribe(string methodName, string id)
 		{
 			var key = $"{methodName}:{id}";
-			if (Context.Connection.Metadata.TryGetValue(key, out object subcriptionObj))
+			if (Context.Connection.Metadata.TryGetValue(key, out object subscriptionObj))
 			{
-				var subcription = (Subcription<Hero>)subcriptionObj;
-				await subcription.Stream.UnsubscribeAsync();
-				subcription.Subject.Dispose();
+				var subscription = (Subscription<Hero>)subscriptionObj;
+				await subscription.Stream.UnsubscribeAsync();
+				subscription.Subject.Dispose();
+				Context.Connection.Metadata.Remove(key);
 			}
 		}
 
@@ -184,7 +185,7 @@ namespace Sample.Orleans.Client.WebApp.SignalRHubs
 		//}
 	}
 
-	public class Subcription<T>
+	public class Subscription<T>
 	{
 		public StreamSubscriptionHandle<T> Stream { get; set; }
 		public Subject<T> Subject { get; set; }
