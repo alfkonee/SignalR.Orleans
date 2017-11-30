@@ -5,6 +5,7 @@ import { NgxHubConnectionFactory } from "./ngx.hub-connection.factory";
 import { HubConnection } from "./hub-connection";
 import { HubConnectionFactory } from "./hub-connection.factory";
 import { ConnectionStatus } from "./hub-connection.model";
+import { catchError } from "rxjs/operators";
 
 @Component({
 	selector: "hero-list",
@@ -42,27 +43,33 @@ export class HeroListComponent implements OnInit, OnDestroy {
 			userToken = `?token=${user}`;
 		}
 		this.hubConnection = this.hubFactory.get<HeroHub>("hero");
+		this.singed$$ = this.hubConnection.stream<Hero>("GetUpdates", "singed")
+			.subscribe(x => console.log(`${this.source} stream :: singed`, x));
+
+		this.kha$$ = this.hubConnection.stream<Hero>("GetUpdates", "kha-zix")
+			.subscribe(x => console.log(`${this.source} stream :: kha`, x));
 	}
 
 	connect() {
 		this.hubConnection$$ = this.hubConnection.connect()
 			.subscribe(x => console.log(`${this.source} connected!!`));
 
-		this.connectionState$$ = this.hubConnection.connectionState$
-			.subscribe(state => {
-				console.log(`${this.source} state changed: ${state.status} is ${ConnectionStatus.connected} (connected)`);
-				if (state.status === ConnectionStatus.connected) {
-					this.hubConnection.on<string>("Send").subscribe(heroHealth => {
-						console.log(`${this.source} send :: data received`, heroHealth);
-					});
+		// this.connectionState$$ = this.hubConnection.connectionState$
+		// 	.subscribe(state => {
+		// 		console.log(`${this.source} state changed: ${state.status} is ${ConnectionStatus.connected} (connected)`);
+		// 		if (state.status === ConnectionStatus.connected) {
+		// 			this.hubConnection.on<string>("Send").subscribe(heroHealth => {
+		// 				console.log(`${this.source} send :: data received`, heroHealth);
+		// 			});
 
-					this.singed$$ = this.hubConnection.stream<Hero>("GetUpdates", "singed")
-						.subscribe(x => console.log(`${this.source} stream :: singed`, x));
+		// 			this.singed$$ = this.hubConnection.stream<Hero>("GetUpdates", "singed")
+		// 				.subscribe(x => console.log(`${this.source} stream :: singed`, x));
 
-					this.kha$$ = this.hubConnection.stream<Hero>("GetUpdates", "kha-zix")
-						.subscribe(x => console.log(`${this.source} stream :: kha`, x));
-				}
-			});
+		// 			this.kha$$ = this.hubConnection.stream<Hero>("GetUpdates", "kha-zix")
+		// 				.subscribe(x => console.log(`${this.source} stream :: kha`, x));
+		// 		}
+		// 	});
+
 	}
 
 	dispose() {

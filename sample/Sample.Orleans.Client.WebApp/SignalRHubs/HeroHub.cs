@@ -1,17 +1,15 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Runtime;
 using Orleans.Streams;
+using Sample.Orleans.Grains;
 using Sample.Orleans.Grains.Heroes;
 using SignalR.Orleans;
 using System;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Channels;
-using Sample.Orleans.Grains;
 
 namespace Sample.Orleans.Client.WebApp.SignalRHubs
 {
@@ -21,10 +19,8 @@ namespace Sample.Orleans.Client.WebApp.SignalRHubs
 
 		private readonly IClusterClient _clusterClient;
 		private readonly ILogger<HeroHub> _logger;
-
-		//private readonly string _healthStreamSubKey = "healthStreamSub";
-		//private readonly string _heroSubjectStreamKey = "hero-subject";
-		private readonly string _heroStreamProviderKey = "hero-StreamProvider";
+		
+		private const string HeroStreamProviderKey = "hero-StreamProvider";
 
 		public HeroHub(
 			IClusterClient clusterClient,
@@ -51,46 +47,27 @@ namespace Sample.Orleans.Client.WebApp.SignalRHubs
 			}
 
 			var streamProvider = _clusterClient.GetStreamProvider(Constants.STREAM_PROVIDER);
-			Context.Connection.Metadata.Add(_heroStreamProviderKey, streamProvider);
-
-			//var stream = streamProvider.GetStream<Hero>(session, $"hero:{heroName}");
-			//var connectionId = Context.ConnectionId;
-
-			//var healthStreamSub = await stream.SubscribeAsync(
-			//	(action, st) =>
-			//	{
-			//		_logger.Info("{hubName} Stream [hero.health] triggered {action} for connection {connection}", _source, action, connectionId);
-			//		heroSubject.OnNext(action.ToString());
-			//		return Task.CompletedTask;
-			//	});
-
-			//Context.Connection.Metadata.Add(_healthStreamSubKey, healthStreamSub);
-			//Context.Connection.Metadata.Add(_heroSubjectStreamKey, heroSubject.AsObservable());
+			Context.Connection.Metadata.Add(HeroStreamProviderKey, streamProvider);
 		}
 
 		public override async Task OnDisconnectedAsync(Exception ex)
 		{
 			_logger.Info("{hubName} User disconnected {connectionId}", _source, Context.ConnectionId);
-			//if (Context.Connection.Metadata.TryGetValue(_healthStreamSubKey, out object healthStream))
-			//{
-			//	_logger.Info("{hubName} Unsubscribing stream...", _source, _healthStreamSubKey, Context.ConnectionId);
-			//	await ((StreamSubscriptionHandle<Hero>)healthStream).UnsubscribeAsync();
-			//	Context.Connection.Metadata.Remove(_healthStreamSubKey);
-			//}
-			//if (Context.Connection.Metadata.ContainsKey(_heroSubjectStreamKey))
-			//{
-			//	_logger.Info("{hubName} Unsubscribing hero subject stream...", _source, _heroSubjectStreamKey, Context.ConnectionId);
-			//	Context.Connection.Metadata.Remove(_heroSubjectStreamKey);
-			//}
+
+			if (Context.Connection.Metadata.TryGetValue(HeroStreamProviderKey, out object _))
+				Context.Connection.Metadata.Remove(HeroStreamProviderKey);
+
+			foreach (var item in Context.Connection.Metadata)
+			{
+				if (!(item.Value is Subscription<Hero> subscription))
+					continue;
+
+				await subscription.Stream.UnsubscribeAsync();
+				subscription.Subject.Dispose();
+			}
+
 			await Clients.All.Send($"{_source} {Context.ConnectionId} left");
 		}
-
-		//[Authorize]
-		//public IObservable<string> Health()
-		//{
-		//	Context.Connection.Metadata.TryGetValue(_heroSubjectStreamKey, out object streamObj);
-		//	return (IObservable<string>)streamObj;
-		//}
 
 		public IObservable<Hero> GetUpdates(string id)
 		{
@@ -98,7 +75,7 @@ namespace Sample.Orleans.Client.WebApp.SignalRHubs
 			var grain = _clusterClient.GetGrain<IHeroGrain>(id);
 			grain.Get();
 
-			Context.Connection.Metadata.TryGetValue(_heroStreamProviderKey, out object streamProviderObj);
+			Context.Connection.Metadata.TryGetValue(HeroStreamProviderKey, out object streamProviderObj);
 			var streamProvider = (IStreamProvider)streamProviderObj;
 			var stream = streamProvider.GetStream<Hero>(StreamConstants.HeroStream, $"hero:{id}");
 			var heroSubject = new Subject<Hero>();
@@ -139,31 +116,31 @@ namespace Sample.Orleans.Client.WebApp.SignalRHubs
 			return Task.FromResult($"hello {message}");
 		}
 
-		public IObservable<int> ObservableCounter(int count, int delay)
-		{
-			return Observable.Interval(TimeSpan.FromMilliseconds(delay))
-				.Select((_, index) => index)
-				.Take(count);
+		//public IObservable<int> ObservableCounter(int count, int delay)
+		//{
+		//	return Observable.Interval(TimeSpan.FromMilliseconds(delay))
+		//		.Select((_, index) => index)
+		//		.Take(count);
 
-		}
+		//}
 
-		public ReadableChannel<int> ChannelCounter(int count, int delay)
-		{
-			var channel = Channel.CreateUnbounded<int>();
+		//public ReadableChannel<int> ChannelCounter(int count, int delay)
+		//{
+		//	var channel = Channel.CreateUnbounded<int>();
 
-			Task.Run(async () =>
-			{
-				for (var i = 0; i < count; i++)
-				{
-					await channel.Out.WriteAsync(i);
-					await Task.Delay(delay);
-				}
+		//	Task.Run(async () =>
+		//	{
+		//		for (var i = 0; i < count; i++)
+		//		{
+		//			await channel.Out.WriteAsync(i);
+		//			await Task.Delay(delay);
+		//		}
 
-				channel.Out.TryComplete();
-			});
+		//		channel.Out.TryComplete();
+		//	});
 
-			return channel.In;
-		}
+		//	return channel.In;
+		//}
 
 		//public Task SendToGroup(string groupName, string message)
 		//{
