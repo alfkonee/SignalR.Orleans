@@ -49,8 +49,8 @@ export class HubConnection<THub> {
 				this.hubConnection = new SignalRHubConnection(`${connectionOpts.endpointUri}${queryString}`, connectionOpts.options)
 			),
 			filter(([, wasConnected]) => wasConnected),
-			// map(() => this.connect())
-		)
+			map(() => this.connect())
+			)
 			.subscribe();
 	}
 
@@ -74,17 +74,17 @@ export class HubConnection<THub> {
 				console.info(`${this.source} connected!`);
 				this._connectionState$.next(connectedState);
 				this.hubConnection.onclose(err => {
-					console.warn(`${this.source} session closed`);
 
 					if (err) {
 						console.error(`${this.source} session closed with errors`, err);
 						this._connectionState$.next({ status: ConnectionStatus.disconnected, reason: "error", data: err });
 					} else {
+						console.warn(`${this.source} session closed`);
 						this._connectionState$.next(disconnectedState);
 					}
 				});
 			})
-			); // .catchError();
+			); // todo: retry
 	}
 
 	setData(data: Dictionary<string>) {
@@ -123,7 +123,7 @@ export class HubConnection<THub> {
 				complete: () => observer.complete()
 			});
 			return () => {
-				console.warn(">>> stream despose!");
+				console.warn(">>> stream dispose!");
 				if (this._connectionState$.value.status === ConnectionStatus.connected) {
 					this.send("StreamUnsubscribe", methodName, ...args);
 				}
@@ -156,7 +156,6 @@ export class HubConnection<THub> {
 			console.warn(`stopping...`);
 			this.hubConnection.stop();
 			// this.hubConnection = undefined as any;
-			this._connectionState$.next(disconnectedState);
 		}
 	}
 }

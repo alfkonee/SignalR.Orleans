@@ -54,9 +54,6 @@ namespace Sample.Orleans.Client.WebApp.SignalRHubs
 		{
 			_logger.Info("{hubName} User disconnected {connectionId}", _source, Context.ConnectionId);
 
-			if (Context.Connection.Metadata.TryGetValue(HeroStreamProviderKey, out object _))
-				Context.Connection.Metadata.Remove(HeroStreamProviderKey);
-
 			foreach (var item in Context.Connection.Metadata)
 			{
 				if (!(item.Value is Subscription<Hero> subscription))
@@ -65,7 +62,7 @@ namespace Sample.Orleans.Client.WebApp.SignalRHubs
 				await subscription.Stream.UnsubscribeAsync();
 				subscription.Subject.Dispose();
 			}
-
+			Context.Connection.Metadata.Clear();
 			await Clients.All.Send($"{_source} {Context.ConnectionId} left");
 		}
 
