@@ -99,8 +99,12 @@ export class HeroListComponent implements OnInit, OnDestroy {
 
 	setData() {
 		this.hubConnection.setData({ token: "cla-keyxx", test: "hello1" });
-		// this.hubConnection.setData({ token: "cla-x", test: "hello2" });
+		this.hubConnection.setData({ token: "gunit-x", test: "v2" });
 		// this.hubConnection.setData({ token: "cla-kezy", test: "hello3" });
+	}
+
+	clearData() {
+		this.hubConnection.clearData();
 	}
 
 	trackByHero(_index: number, hero: Hero): string {

@@ -6,15 +6,11 @@ import { empty } from "rxjs/observable/empty";
 import { of } from "rxjs/observable/of";
 import { Subject } from "rxjs/Subject";
 import { Observer } from "rxjs/Observer";
-import { tap, map, filter, throttleTime, switchMap, skipUntil } from "rxjs/operators";
+import { tap, map, filter, switchMap, skipUntil, debounceTime, take, delay } from "rxjs/operators";
 
 import { ConnectionState, ConnectionStatus, HubConnectionOptions } from "./hub-connection.model";
 import { Dictionary } from "./core/collection";
 import { buildQueryString } from "./core/utils";
-import { takeUntil } from "rxjs/operators/takeUntil";
-import { take } from "rxjs/operators/take";
-import { delay } from "rxjs/operators/delay";
-import { delayWhen } from "rxjs/operators/delayWhen";
 
 const connectedState: ConnectionState = { status: ConnectionStatus.connected };
 const disconnectedState: ConnectionState = { status: ConnectionStatus.disconnected };
@@ -35,8 +31,8 @@ export class HubConnection<THub> {
 
 		this.hubConnectionOptions$
 			.pipe(
-			// throttleTime(100),
-			tap(x => console.warn("hubConnectionOptions triggered ", x.data)),
+			debounceTime(10),
+			tap(x => console.warn("hubConnectionOptions triggered ", x.data, x)),
 			map(connectionOpts => [connectionOpts, this._connectionState$.value.status] as [HubConnectionOptions, ConnectionStatus]),
 			switchMap(([connectionOpts, prevConnectionStatus]) => this.disconnect().pipe(
 				map(() => {
@@ -60,7 +56,6 @@ export class HubConnection<THub> {
 			console.warn(`${this.source} session already connected`);
 			return empty();
 		}
-
 		// todo: check if needed
 		if (!this.hubConnection) {
 			const connectionOpts = this.hubConnectionOptions$.value;
