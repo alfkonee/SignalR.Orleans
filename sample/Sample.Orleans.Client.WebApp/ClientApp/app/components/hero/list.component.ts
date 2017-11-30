@@ -108,7 +108,7 @@ export class HeroListComponent implements OnInit, OnDestroy {
 	}
 
 	disconnect() {
-		this.hubConnection.disconnect();
+		this.hubConnection.disconnect().subscribe();
 	}
 
 	ngOnDestroy(): void {

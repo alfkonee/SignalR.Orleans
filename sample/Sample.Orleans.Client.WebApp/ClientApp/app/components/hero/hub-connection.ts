@@ -13,6 +13,8 @@ import { Dictionary } from "./core/collection";
 import { buildQueryString } from "./core/utils";
 import { takeUntil } from "rxjs/operators/takeUntil";
 import { take } from "rxjs/operators/take";
+import { delay } from "rxjs/operators/delay";
+import { delayWhen } from "rxjs/operators/delayWhen";
 
 const connectedState: ConnectionState = { status: ConnectionStatus.connected };
 const disconnectedState: ConnectionState = { status: ConnectionStatus.disconnected };
@@ -35,22 +37,20 @@ export class HubConnection<THub> {
 			.pipe(
 			// throttleTime(100),
 			tap(x => console.warn("hubConnectionOptions triggered ", x.data)),
-			map(connectionOpts => {
-				const wasConnected = this._connectionState$.value.status === ConnectionStatus.connected;
-				return [connectionOpts, wasConnected] as [HubConnectionOptions, boolean];
-			}),
-			tap(() => this.disconnect()),
-			map(([connectionOpts, wasConnected]) => {
-				const queryString = buildQueryString(connectionOpts.data);
-				console.warn(`connecting to: ${connectionOpts.endpointUri}${queryString}`);
-				return [connectionOpts, wasConnected, queryString] as [HubConnectionOptions, boolean, string];
-			}),
-			tap(([connectionOpts, wasConnected, queryString]) =>
-				this.hubConnection = new SignalRHubConnection(`${connectionOpts.endpointUri}${queryString}`, connectionOpts.options)
-			),
-			filter(([, wasConnected]) => wasConnected),
-			map(() => this.connect())
+			map(connectionOpts => [connectionOpts, this._connectionState$.value.status] as [HubConnectionOptions, ConnectionStatus]),
+			switchMap(([connectionOpts, prevConnectionStatus]) => this.disconnect().pipe(
+				map(() => {
+					const queryString = buildQueryString(connectionOpts.data);
+					console.warn(`connecting to: ${connectionOpts.endpointUri}${queryString}`);
+					return queryString;
+				}),
+				tap(queryString =>
+					this.hubConnection = new SignalRHubConnection(`${connectionOpts.endpointUri}${queryString}`, connectionOpts.options)
+				),
+				filter(() => prevConnectionStatus === ConnectionStatus.connected),
+				switchMap(() => this.connect())
 			)
+			))
 			.subscribe();
 	}
 
@@ -152,11 +152,15 @@ export class HubConnection<THub> {
 
 	disconnect() {
 		console.warn(`disconnecting...`);
-		if (this._connectionState$.value.status === ConnectionStatus.connected) {
-			console.warn(`stopping...`);
-			this.hubConnection.stop();
-			// this.hubConnection = undefined as any;
-		}
+		return of(null).pipe(
+			tap(() => console.warn(`${this.source} stopping init`)),
+			filter(() => this._connectionState$.value.status === ConnectionStatus.connected),
+			tap(() => console.warn(`${this.source} stopping - start...`)),
+			tap(() => this.hubConnection.stop()),
+			delay(1000), // workaround since signalr are returning void and internally firing a callback for disconnect
+			tap(() => console.warn(`${this.source} stopping - complete`)),
+			take(1)
+		);
 	}
 }
 
