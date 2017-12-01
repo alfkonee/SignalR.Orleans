@@ -13,7 +13,12 @@ import { Dictionary } from "./core/collection";
 import { buildQueryString } from "./core/utils";
 
 const connectedState: ConnectionState = { status: ConnectionStatus.connected };
+const connectReadyState: ConnectionState = { status: ConnectionStatus.connectionReady };
 const disconnectedState: ConnectionState = { status: ConnectionStatus.disconnected };
+
+function emptyNext<TResult>(): Observable<TResult> {
+	return of<TResult>().pipe(take(1));
+}
 
 export class HubConnection<THub> {
 
@@ -43,8 +48,9 @@ export class HubConnection<THub> {
 				tap(queryString =>
 					this.hubConnection = new SignalRHubConnection(`${connectionOpts.endpointUri}${queryString}`, connectionOpts.options)
 				),
+				tap(() => this._connectionState$.next(connectReadyState)),
 				filter(() => prevConnectionStatus === ConnectionStatus.connected),
-				switchMap(() => this.connect())
+				switchMap(() => this.internalConnect())
 			)
 			))
 			.subscribe();
@@ -56,20 +62,33 @@ export class HubConnection<THub> {
 			console.warn(`${this.source} session already connected`);
 			return empty();
 		}
-		// todo: check if needed
-		if (!this.hubConnection) {
-			const connectionOpts = this.hubConnectionOptions$.value;
-			const queryString = buildQueryString(connectionOpts.data);
-			this.hubConnection = new SignalRHubConnection(`${connectionOpts.endpointUri}${queryString}`, connectionOpts.options);
-		}
 
+		return of(null).pipe(
+			tap(() => console.log(`${this.source} connectV2 init`)),
+			switchMap(() => this._connectionState$.pipe(
+				tap(() => console.log(`${this.source} connectV2 - until start...`)),
+				tap(x => {
+					if (x.status === ConnectionStatus.disconnected) {
+						this.hubConnectionOptions$.next(this.hubConnectionOptions$.value);
+					}
+				}),
+				tap(() => console.log(`${this.source} connectV2 - almost done...`)),
+				skipUntil(this._connectionState$.pipe(filter(x => x.status === ConnectionStatus.connectionReady))),
+				tap(() => console.log(`${this.source} connectV2 - until complete`)),
+				take(1)
+			)),
+			tap(() => console.log(`${this.source} connectV2 - start`)),
+			switchMap(() => this.internalConnect())
+		);
+	}
+
+	internalConnect() {
 		return fromPromise(this.hubConnection.start())
 			.pipe(
 			tap(() => {
 				console.info(`${this.source} connected!`);
 				this._connectionState$.next(connectedState);
 				this.hubConnection.onclose(err => {
-
 					if (err) {
 						console.error(`${this.source} session closed with errors`, err);
 						this._connectionState$.next({ status: ConnectionStatus.disconnected, reason: "error", data: err });
@@ -147,14 +166,16 @@ export class HubConnection<THub> {
 
 	disconnect() {
 		console.warn(`disconnecting...`);
+		if (this._connectionState$.value.status === ConnectionStatus.disconnected) {
+			return of(null);
+		}
+
 		return of(null).pipe(
 			tap(() => console.warn(`${this.source} stopping init`)),
-			filter(() => this._connectionState$.value.status === ConnectionStatus.connected),
 			tap(() => console.warn(`${this.source} stopping - start...`)),
 			tap(() => this.hubConnection.stop()),
-			delay(1000), // workaround since signalr are returning void and internally firing a callback for disconnect
-			tap(() => console.warn(`${this.source} stopping - complete`)),
-			take(1)
+			delay(100), // workaround since signalr are returning void and internally firing a callback for disconnect
+			tap(() => console.warn(`${this.source} stopping - complete`))
 		);
 	}
 }

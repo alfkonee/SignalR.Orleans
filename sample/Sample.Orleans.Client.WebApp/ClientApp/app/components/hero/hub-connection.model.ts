@@ -4,6 +4,7 @@ import { Dictionary } from "./core/collection";
 
 export enum ConnectionStatus {
 	connected,
+	connectionReady,
 	disconnected
 }
 
