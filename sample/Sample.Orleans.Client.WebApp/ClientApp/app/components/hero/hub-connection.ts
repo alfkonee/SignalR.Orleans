@@ -9,16 +9,13 @@ import { Observer } from "rxjs/Observer";
 import { tap, map, filter, switchMap, skipUntil, debounceTime, take, delay } from "rxjs/operators";
 
 import { ConnectionState, ConnectionStatus, HubConnectionOptions } from "./hub-connection.model";
-import { Dictionary } from "./core/collection";
-import { buildQueryString } from "./core/utils";
+import { buildQueryString } from "./utils/query-string";
+import { Dictionary } from "./utils/dictionary";
+import { emptyNext } from "./utils/rxjs";
 
 const connectedState: ConnectionState = { status: ConnectionStatus.connected };
 const connectReadyState: ConnectionState = { status: ConnectionStatus.connectionReady };
 const disconnectedState: ConnectionState = { status: ConnectionStatus.disconnected };
-
-function emptyNext<TResult>(): Observable<TResult> {
-	return of<TResult>().pipe(take(1));
-}
 
 export class HubConnection<THub> {
 
@@ -63,7 +60,7 @@ export class HubConnection<THub> {
 			return empty();
 		}
 
-		return of(null).pipe(
+		return emptyNext().pipe(
 			tap(() => console.log(`${this.source} connectV2 init`)),
 			switchMap(() => this._connectionState$.pipe(
 				tap(() => console.log(`${this.source} connectV2 - until start...`)),
@@ -143,7 +140,7 @@ export class HubConnection<THub> {
 				}
 			};
 		});
-		return of(null).pipe(
+		return emptyNext().pipe(
 			tap(() => console.log(`${this.source} stream init`)),
 			switchMap(() => this.connectionState$.pipe(
 				tap(() => console.log(`${this.source} stream - until start...`)),
@@ -167,7 +164,7 @@ export class HubConnection<THub> {
 	disconnect() {
 		console.warn(`disconnecting...`);
 		if (this._connectionState$.value.status === ConnectionStatus.disconnected) {
-			return of(null);
+			return emptyNext();
 		}
 
 		return of(null).pipe(
@@ -175,7 +172,8 @@ export class HubConnection<THub> {
 			tap(() => console.warn(`${this.source} stopping - start...`)),
 			tap(() => this.hubConnection.stop()),
 			delay(100), // workaround since signalr are returning void and internally firing a callback for disconnect
-			tap(() => console.warn(`${this.source} stopping - complete`))
+			tap(() => console.warn(`${this.source} stopping - complete`)),
+			take(1)
 		);
 	}
 }

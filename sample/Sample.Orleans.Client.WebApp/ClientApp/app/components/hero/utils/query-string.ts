@@ -1,4 +1,4 @@
-import { Dictionary } from "./collection";
+import { Dictionary } from "./dictionary";
 
 export function buildQueryString(data: Dictionary<string> | undefined) {
 	let queryString = "";

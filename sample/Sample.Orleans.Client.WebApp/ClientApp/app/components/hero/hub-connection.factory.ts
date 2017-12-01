@@ -1,6 +1,6 @@
 import { HubConnectionOptions } from "./hub-connection.model";
 import { HubConnection } from "./hub-connection";
-import { Dictionary } from "./core/collection";
+import { Dictionary } from "./utils/dictionary";
 
 export class HubConnectionFactory {
 
