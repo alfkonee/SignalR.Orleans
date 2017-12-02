@@ -1,7 +1,7 @@
 import { Injectable, PLATFORM_ID, Inject } from "@angular/core";
 import { isPlatformServer } from "@angular/common";
 
-import { HubConnectionFactory } from "./hub-connection.factory";
+import { HubConnectionFactory } from "@ssv/signalr-client";
 
 @Injectable()
 export class NgxHubConnectionFactory {

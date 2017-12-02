@@ -1,10 +1,9 @@
 import { Component, OnInit, OnDestroy } from "@angular/core";
 import { ISubscription } from "rxjs/Subscription";
+import { HubConnectionFactory, ConnectionStatus, HubConnection } from "@ssv/signalr-client";
 
 import { NgxHubConnectionFactory } from "./ngx.hub-connection.factory";
-import { HubConnection } from "./hub-connection";
-import { HubConnectionFactory } from "./hub-connection.factory";
-import { ConnectionStatus } from "./hub-connection.model";
+
 import { catchError } from "rxjs/operators";
 
 @Component({
