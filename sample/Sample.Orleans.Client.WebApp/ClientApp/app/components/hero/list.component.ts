@@ -52,7 +52,13 @@ export class HeroListComponent implements OnInit, OnDestroy {
 
 	connect() {
 		this.hubConnection$$ = this.hubConnection.connect()
-			.subscribe(x => console.log(`${this.source} connected!!`));
+			.subscribe(x => {
+				console.log(`${this.source} connected!!`);
+			});
+
+		this.hubConnection.on<string>("Send").subscribe(val => {
+			console.log(`${this.source} send :: data received >>>`, val);
+		});
 
 		// this.connectionState$$ = this.hubConnection.connectionState$
 		// 	.subscribe(state => {

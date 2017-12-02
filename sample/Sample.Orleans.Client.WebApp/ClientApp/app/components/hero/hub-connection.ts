@@ -3,7 +3,6 @@ import { fromPromise } from "rxjs/observable/fromPromise";
 import { BehaviorSubject } from "rxjs/BehaviorSubject";
 import { Observable } from "rxjs/Observable";
 import { empty } from "rxjs/observable/empty";
-import { of } from "rxjs/observable/of";
 import { Subject } from "rxjs/Subject";
 import { Observer } from "rxjs/Observer";
 import { tap, map, filter, switchMap, skipUntil, debounceTime, take, delay } from "rxjs/operators";
@@ -31,9 +30,8 @@ export class HubConnection<THub> {
 
 		this.hubConnectionOptions$ = new BehaviorSubject<HubConnectionOptions>(connectionOption);
 
-		this.hubConnectionOptions$
-			.pipe(
-			debounceTime(10),
+		const reconnection$ = this.hubConnectionOptions$.pipe(
+			// debounceTime(10),
 			tap(x => console.warn("hubConnectionOptions triggered ", x.data, x)),
 			map(connectionOpts => [connectionOpts, this._connectionState$.value.status] as [HubConnectionOptions, ConnectionStatus]),
 			switchMap(([connectionOpts, prevConnectionStatus]) => this.disconnect().pipe(
@@ -47,59 +45,42 @@ export class HubConnection<THub> {
 				),
 				tap(() => this._connectionState$.next(connectReadyState)),
 				filter(() => prevConnectionStatus === ConnectionStatus.connected),
-				switchMap(() => this.internalConnect())
-			)
+				switchMap(() => this.openConnection())
 			))
-			.subscribe();
+		);
+
+		reconnection$.subscribe();
 	}
 
 	connect(): Observable<void> {
 		console.warn(`${this.source} trying to connect...`);
 		if (this._connectionState$.value.status === ConnectionStatus.connected) {
 			console.warn(`${this.source} session already connected`);
-			return empty();
+			return emptyNext();
 		}
 
 		return emptyNext().pipe(
-			tap(() => console.log(`${this.source} connectV2 init`)),
+			tap(() => console.log(`${this.source} connect init`)),
 			switchMap(() => this._connectionState$.pipe(
-				tap(() => console.log(`${this.source} connectV2 - until start...`)),
+				tap(() => console.log(`${this.source} connect - until start...`)),
 				tap(x => {
 					if (x.status === ConnectionStatus.disconnected) {
 						this.hubConnectionOptions$.next(this.hubConnectionOptions$.value);
 					}
 				}),
-				tap(() => console.log(`${this.source} connectV2 - almost done...`)),
+				tap(() => console.log(`${this.source} connect - almost done...`)),
 				skipUntil(this._connectionState$.pipe(filter(x => x.status === ConnectionStatus.connectionReady))),
-				tap(() => console.log(`${this.source} connectV2 - until complete`)),
+				tap(() => console.log(`${this.source} connect - until complete`)),
 				take(1)
 			)),
-			tap(() => console.log(`${this.source} connectV2 - start`)),
-			switchMap(() => this.internalConnect())
+			tap(() => console.log(`${this.source} connect - start`)),
+			switchMap(() => this.openConnection())
 		);
 	}
 
-	internalConnect() {
-		return fromPromise(this.hubConnection.start())
-			.pipe(
-			tap(() => {
-				console.info(`${this.source} connected!`);
-				this._connectionState$.next(connectedState);
-				this.hubConnection.onclose(err => {
-					if (err) {
-						console.error(`${this.source} session closed with errors`, err);
-						this._connectionState$.next({ status: ConnectionStatus.disconnected, reason: "error", data: err });
-					} else {
-						console.warn(`${this.source} session closed`);
-						this._connectionState$.next(disconnectedState);
-					}
-				});
-			})
-			); // todo: retry
-	}
-
-	setData(data: Dictionary<string>) {
+	setData(data: Dictionary<string> | undefined | null) {
 		if (!data) {
+			this.clearData();
 			return;
 		}
 		const connection = this.hubConnectionOptions$.value;
@@ -167,14 +148,31 @@ export class HubConnection<THub> {
 			return emptyNext();
 		}
 
-		return of(null).pipe(
+		return emptyNext().pipe(
 			tap(() => console.warn(`${this.source} stopping init`)),
 			tap(() => console.warn(`${this.source} stopping - start...`)),
 			tap(() => this.hubConnection.stop()),
-			delay(100), // workaround since signalr are returning void and internally firing a callback for disconnect
+			delay(200), // workaround since signalr are returning void and internally firing a callback for disconnect
 			tap(() => console.warn(`${this.source} stopping - complete`)),
-			take(1)
 		);
+	}
+
+	private openConnection() {
+		return fromPromise(this.hubConnection.start()).pipe(
+			tap(() => this._connectionState$.next(connectedState)),
+			tap(() => {
+				this.hubConnection.onclose(err => {
+					if (err) {
+						console.error(`${this.source} session disconnected with errors`, err);
+						this._connectionState$.next({ status: ConnectionStatus.disconnected, reason: "error", data: err });
+					} else {
+						console.warn(`${this.source} session disconnected`);
+						this._connectionState$.next(disconnectedState);
+					}
+				});
+			}),
+			take(1)
+		); // todo: retry
 	}
 }
 
