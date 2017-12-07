@@ -19,9 +19,8 @@ export class HeroListComponent implements OnInit, OnDestroy {
 	private hubConnection: HubConnection<HeroHub>;
 
 	private source = "HeroListComponent ::";
-	private endpointUri = "/hero";
-	private endpointUriNotifications = "/userNotifications";
 
+	private onSend$$: ISubscription | undefined;
 	private kha$$: ISubscription | undefined;
 	private singed$$: ISubscription | undefined;
 	private hubConnection$$: ISubscription;
@@ -32,21 +31,21 @@ export class HeroListComponent implements OnInit, OnDestroy {
 	) { }
 
 	ngOnInit(): void {
-		this.createConnection(this.endpointUri, "cla-key");
+		this.createConnection();
 		this.connect();
 	}
 
-	createConnection(endpointUri: string, user: string) {
-		let userToken = "";
-		if (user) {
-			userToken = `?token=${user}`;
-		}
+	createConnection() {
 		this.hubConnection = this.hubFactory.get<HeroHub>("hero");
 		this.singed$$ = this.hubConnection.stream<Hero>("GetUpdates", "singed")
 			.subscribe(x => console.log(`${this.source} stream :: singed`, x));
 
 		this.kha$$ = this.hubConnection.stream<Hero>("GetUpdates", "kha-zix")
 			.subscribe(x => console.log(`${this.source} stream :: kha`, x));
+
+		this.onSend$$ = this.hubConnection.on<string>("Send").subscribe(val => {
+			console.log(`${this.source} send :: data received >>>`, val);
+		});
 	}
 
 	connect() {
@@ -54,27 +53,6 @@ export class HeroListComponent implements OnInit, OnDestroy {
 			.subscribe(x => {
 				console.log(`${this.source} connected!!`);
 			});
-
-		this.hubConnection.on<string>("Send").subscribe(val => {
-			console.log(`${this.source} send :: data received >>>`, val);
-		});
-
-		// this.connectionState$$ = this.hubConnection.connectionState$
-		// 	.subscribe(state => {
-		// 		console.log(`${this.source} state changed: ${state.status} is ${ConnectionStatus.connected} (connected)`);
-		// 		if (state.status === ConnectionStatus.connected) {
-		// 			this.hubConnection.on<string>("Send").subscribe(heroHealth => {
-		// 				console.log(`${this.source} send :: data received`, heroHealth);
-		// 			});
-
-		// 			this.singed$$ = this.hubConnection.stream<Hero>("GetUpdates", "singed")
-		// 				.subscribe(x => console.log(`${this.source} stream :: singed`, x));
-
-		// 			this.kha$$ = this.hubConnection.stream<Hero>("GetUpdates", "kha-zix")
-		// 				.subscribe(x => console.log(`${this.source} stream :: kha`, x));
-		// 		}
-		// 	});
-
 	}
 
 	dispose() {
@@ -90,6 +68,9 @@ export class HeroListComponent implements OnInit, OnDestroy {
 		}
 		if (this.singed$$) {
 			this.singed$$.unsubscribe();
+		}
+		if (this.onSend$$) {
+			this.onSend$$.unsubscribe();
 		}
 	}
 

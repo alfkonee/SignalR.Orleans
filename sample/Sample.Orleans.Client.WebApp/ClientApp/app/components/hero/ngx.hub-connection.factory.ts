@@ -13,7 +13,7 @@ export class NgxHubConnectionFactory {
 		console.log("NgxHubConnectionFactory ctor");
 		if (!isPlatformServer(platformId)) {
 			factory.create(
-				{ key: "hero", endpointUri: "/hero" },
+				{ key: "hero", endpointUri: "http://10.0.0.14:1200/hero" },
 				{ key: "user", endpointUri: "/userNotifications" },
 			);
 		}
