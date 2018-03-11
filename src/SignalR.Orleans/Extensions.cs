@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using Orleans;
 using Orleans.Hosting;
-using Orleans.Runtime.Configuration;
 using SignalR.Orleans;
 using SignalR.Orleans.Clients;
 
@@ -9,46 +8,24 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     public static class OrleansServerExtensions
     {
-        public static ClusterConfiguration AddSignalR(this ClusterConfiguration config)
+        public static ISiloHostBuilder UseSignalR(this ISiloHostBuilder builder, bool useFireAndForgetDelivery = false)
         {
-            config.AddSimpleMessageStreamProvider(Constants.STREAM_PROVIDER);
-            try
-            {
-                config.AddMemoryStorageProvider("PubSubStore");
-            }
-            catch
-            {
-                // PubSubStore was already added. Do nothing.
-            }
-            config.AddMemoryStorageProvider(Constants.STORAGE_PROVIDER);
-            return config;
-        }
+            try { builder = builder.AddMemoryGrainStorage("PubSubStore"); }
+            catch { /** PubSubStore was already added. Do nothing. **/ }
 
-        public static ISiloHostBuilder UseSignalR(this ISiloHostBuilder builder)
-        {
-            return builder.ConfigureApplicationParts(mgr =>
-                mgr.AddApplicationPart(typeof(ClientGrain).Assembly));
+            return builder.AddMemoryGrainStorage(Constants.STORAGE_PROVIDER)
+                .AddSimpleMessageStreamProvider(Constants.STREAM_PROVIDER, opt => opt.FireAndForgetDelivery = useFireAndForgetDelivery)
+                .ConfigureApplicationParts(parts => parts.AddApplicationPart(typeof(ClientGrain).Assembly).WithReferences());
         }
     }
 
     public static class OrleansClientExtensions
     {
-        public static ClientConfiguration AddSignalR(this ClientConfiguration config)
+        public static IClientBuilder UseSignalR(this IClientBuilder builder, bool useFireAndForgetDelivery = false)
         {
-            config.AddSimpleMessageStreamProvider(Constants.STREAM_PROVIDER);
-            return config;
-        }
-
-        public static IClientBuilder UseSignalR(this IClientBuilder builder)
-        {
-            return builder.ConfigureApplicationParts(mgr =>
-                mgr.AddApplicationPart(typeof(IClientGrain).Assembly));
-        }
-
-        public static ISignalRBuilder AddOrleans(this ISignalRBuilder builder)
-        {
-            builder.Services.AddSingleton(typeof(HubLifetimeManager<>), typeof(OrleansHubLifetimeManager<>));
-            return builder;
+            return builder.AddSimpleMessageStreamProvider(Constants.STREAM_PROVIDER, opt => opt.FireAndForgetDelivery = useFireAndForgetDelivery)
+                .ConfigureApplicationParts(parts => parts.AddApplicationPart(typeof(IClientGrain).Assembly).WithReferences())
+                .ConfigureServices(services => services.AddSingleton(typeof(HubLifetimeManager<>), typeof(OrleansHubLifetimeManager<>)));
         }
     }
 }
