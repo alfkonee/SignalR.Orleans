@@ -3,7 +3,7 @@
   <h1>SignalR.Orleans</h1>
 </p>
 
-[![CircleCI](https://circleci.com/gh/OrleansContrib/SignalR.Orleans/tree/master.svg?style=svg)](https://circleci.com/gh/OrleansContrib/SignalR.Orleans/tree/master)
+[![Build status](https://dotnet-ci.visualstudio.com/DotnetCI/_apis/build/status/SignalR-Orleans-CI?branch=master)](https://dotnet-ci.visualstudio.com/DotnetCI/_build/latest?definitionId=1&branch=master)
 [![NuGet](https://img.shields.io/nuget/v/SignalR.Orleans.svg?style=flat)](http://www.nuget.org/packages/SignalR.Orleans)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/dotnet/orleans?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
@@ -20,15 +20,15 @@ Installation is performed via [NuGet](https://www.nuget.org/packages/SignalR.Orl
 
 From Package Manager:
 
-> PS> Install-Package SignalR.Orleans -prerelease
+> PS> Install-Package SignalR.Orleans
 
 .Net CLI:
 
-> \# dotnet add package SignalR.Orleans -prerelease
+> \# dotnet add package SignalR.Orleans
 
-Paket: 
+Paket:
 
-> \# paket add SignalR.Orleans -prerelease
+> \# paket add SignalR.Orleans
 
 # Configuration
 
@@ -38,14 +38,28 @@ We need to configure the Orleans Silo with the below:
 
 ***Example***
 ```cs
-var siloPort = 11111;
-int gatewayPort = 30000;
-var siloAddress = IPAddress.Loopback;
-
 var silo = new SiloHostBuilder()
-    .UseSignalR()
-    .Build();
+  .UseSignalR()
+  .AddMemoryGrainStorage("PubSubStore") // You can use any other storage provider as long as you have one registered as "PubSubStore".
+  .Build();
+
 await silo.StartAsync();
+```
+
+### Configure Silo Storage Provider and Grain Persistance
+Optional configuration to override the default implementation for both providers which by default are set as `Memory`.
+
+***Example***
+```cs
+.UseSignalR(cfg =>
+{
+  cfg.ConfigureBuilder = (builder, config) =>
+  {
+    builder
+      .AddMemoryGrainStorage(config.PubSubProvider)
+      .AddMemoryGrainStorage(config.StorageProvider);
+  };
+})
 ```
 
 ## Client
@@ -55,12 +69,14 @@ Now your SignalR application needs to connect to the Orleans Cluster by using an
 ***Example***
 ```cs
 var client = new ClientBuilder()
-    .UseSignalR()
-    .Build();
-    await client.Connect();
+  .UseSignalR()
+  .Build();
+
+await client.Connect();
 ```
 
 Somewhere in your `Startup.cs`:
+* Add `IClusterClient` (created in the above example) to `IServiceCollection`.
 * Use `.AddSignalR()` on `IServiceCollection` (this is part of `Microsoft.AspNetCore.SignalR` nuget package).
 * Use `AddOrleans()` on `.AddSignalR()`.
 
@@ -68,11 +84,12 @@ Somewhere in your `Startup.cs`:
 ```cs
 public void ConfigureServices(IServiceCollection services)
 {
-    ...
-    services
-        .AddSignalR()
-        .AddOrleans();
-    ...
+  ...
+  services
+    .AddSingleton<IClusterClient>(client)
+    .AddSignalR()
+    .AddOrleans();
+  ...
 }
 ```
 Great! Now you have SignalR configured and Orleans SignalR backplane built in Orleans!
@@ -83,18 +100,18 @@ Great! Now you have SignalR configured and Orleans SignalR backplane built in Or
 
 Sample usage: Receiving server push notifications from message brokers, web hooks, etc. Ideally first update your grain state and then push signalr message to the client.
 
-### Example: 
+### Example
 ```cs
 public class UserNotificationGrain : Grain<UserNotificationState>, IUserNotificationGrain
 {
-	private HubContext<IUserNotificationHub> _hubContext;
+  private HubContext<IUserNotificationHub> _hubContext;
 
-	public override async Task OnActivateAsync()
-	{
-		_hubContext = GrainFactory.GetHub<IUserNotificationHub>();
-		// some code...
-		await _hubContext.User(this.GetPrimaryKeyString()).SendSignalRMessage("Broadcast", State.UserNotification);
-	}
+  public override async Task OnActivateAsync()
+  {
+    _hubContext = GrainFactory.GetHub<IUserNotificationHub>();
+    // some code...
+    await _hubContext.User(this.GetPrimaryKeyString()).Send("Broadcast", State.UserNotification);
+  }
 }
 ```
 

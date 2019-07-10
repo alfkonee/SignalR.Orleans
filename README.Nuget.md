@@ -7,9 +7,26 @@ We need to configure the Orleans Silo with the below:
 ***Example***
 ```cs
 var silo = new SiloHostBuilder()
-    .UseSignalR() 
+    .UseSignalR()
     .Build();
+
 await silo.StartAsync();
+```
+
+### Configure Silo Storage Provider and Grain Persistance
+Optional configuration to override the default implementation for both providers which by default are set as `Memory`.
+
+***Example***
+```cs
+.UseSignalR(cfg =>
+{
+    cfg.ConfigureBuilder = (builder, config) =>
+    {
+        builder
+            .AddMemoryGrainStorage(config.PubSubProvider)
+            .AddMemoryGrainStorage(config.StorageProvider);
+    };
+})
 ```
 
 ## Client
@@ -18,11 +35,11 @@ Now your SignalR application needs to connect to the Orleans Cluster by using an
 
 ***Example***
 ```cs
-
 var client = new ClientBuilder()
     .UseSignalR()
     .Build();
-    await client.Connect();
+
+await client.Connect();
 ```
 
 Somewhere in your `Startup.cs`:
@@ -48,17 +65,17 @@ Great! Now you have SignalR configured and Orleans SignalR backplane built in Or
 
 Sample usage: Receiving server push notifications from message brokers, web hooks, etc. Ideally first update your grain state and then push signalr message to the client.
 
-### Example: 
+### Example
 ```cs
 public class UserNotificationGrain : Grain<UserNotificationState>, IUserNotificationGrain
 {
-	private HubContext<IUserNotificationHub> _hubContext;
+    private HubContext<IUserNotificationHub> _hubContext;
 
-	public override async Task OnActivateAsync()
-	{
-		_hubContext = GrainFactory.GetHub<IUserNotificationHub>();
-		// some code...
-		await _hubContext.User(this.GetPrimaryKeyString()).SendSignalRMessage("Broadcast", State.UserNotification);
-	}
+    public override async Task OnActivateAsync()
+    {
+        _hubContext = GrainFactory.GetHub<IUserNotificationHub>();
+        // some code...
+        await _hubContext.User(this.GetPrimaryKeyString()).Send("Broadcast", State.UserNotification);
+    }
 }
 ```
